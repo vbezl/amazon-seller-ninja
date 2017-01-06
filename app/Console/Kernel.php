@@ -7,6 +7,7 @@ use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
 use App\Traits\AmazonFunctionsTrait;
 use \Carbon\Carbon;
+use App\Models\Product;
 
 class Kernel extends ConsoleKernel
 {
