@@ -44,7 +44,7 @@ class Kernel extends ConsoleKernel
             $this->syncRanks($products);
             $this->syncPrices($products);
 
-        })->dailyAt('14:10');
+        })->dailyAt('20:50');
 
 
         // sync orders
@@ -52,7 +52,7 @@ class Kernel extends ConsoleKernel
 
             $this->syncOrders();
 
-        })->dailyAt('14:20');
+        })->dailyAt('21:00');
 
 
         // get _GET_AMAZON_FULFILLED_SHIPMENTS_DATA_ report
@@ -62,35 +62,35 @@ class Kernel extends ConsoleKernel
             $start_date = Carbon::now()->subDays(3);
             $this->requestReports('_GET_AMAZON_FULFILLED_SHIPMENTS_DATA_', $start_date->toIso8601String(), $end_date->toIso8601String());
 
-        })->dailyAt('14:25');
+        })->dailyAt('21:05');
 
         // check status of all reports
         $schedule->call( function () {
 
             $this->checkReports();
 
-        })->dailyAt('14:40');
+        })->dailyAt('21:30');
 
         // download all reports
         $schedule->call( function () {
 
             $this->downloadReports();
 
-        })->dailyAt('14:50');
+        })->dailyAt('21:50');
 
         // process all reports
         $schedule->call( function () {
 
             $this->processReports();
 
-        })->dailyAt('15:00');
+        })->dailyAt('22:00');
 
         // check shipment tracking statuses
         $schedule->call( function () {
 
             $this->trackShipments();
 
-        })->dailyAt('15:10');
+        })->dailyAt('22:10');
 
         // send scheduled emails
         $schedule->call( function () {
