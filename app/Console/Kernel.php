@@ -53,7 +53,7 @@ class Kernel extends ConsoleKernel
 
             $this->syncOrders();
 
-        })->dailyAt('22:00');
+        })->hourly();
 
 
         // get _GET_AMAZON_FULFILLED_SHIPMENTS_DATA_ report

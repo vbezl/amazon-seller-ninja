@@ -217,9 +217,6 @@ trait AmazonFunctionsTrait {
                     );
                 }
 
-                $order_data = [
-                    'amazon_order_id' => $data['AmazonOrderId'],
-                ];
                 $order = Order::updateOrCreate(
                     ['amazon_order_id' => $data['AmazonOrderId']],
                     [
