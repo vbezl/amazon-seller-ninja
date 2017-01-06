@@ -1,0 +1,1 @@
+{{ trans('backpack::base.click_here_to_reset') }}: <a href="{{ $link = url(config('backpack.base.route_prefix', 'panel').'/password/reset', $token).'?email='.urlencode($user->getEmailForPasswordReset()) }}"> {{ $link }} </a>
