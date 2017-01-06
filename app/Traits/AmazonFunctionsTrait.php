@@ -23,6 +23,7 @@ use App\Models\Report;
 use App\Models\Template;
 use App\Models\Email;
 use App\Models\Unsubscriber;
+use App\User;
 
 use \Carbon\Carbon;
 use Log;
@@ -184,103 +185,106 @@ trait AmazonFunctionsTrait {
 
     protected function syncOrders() {
 
-        // TODO: it should not depend on request user (as it will be called from CRON!) - it should work for all users
+        $users = User::whereNotNull('amazon_seller_id')
+            ->whereNotNull('amazon_mws_token')
+            ->get();
 
-        $user = request()->user();
-        $last_update_order = $user->orders()->orderBy('last_update_date', 'desc')->first();
-        $last_update_date = $last_update_order ? $last_update_order->last_update_date : Carbon::now()->subDays(1);
+        foreach($users as $user){
 
-        $obj = new AmazonOrderList('store1');
-        $obj->setUseToken();
-        $obj->setLimits('Modified', $last_update_date->toIso8601String());
-        $obj->fetchOrders();
+            $last_update_order = $user->orders()->orderBy('last_update_date', 'desc')->first();
+            $last_update_date = $last_update_order ? $last_update_order->last_update_date : Carbon::now()->subDays(1);
 
-        $amazon_orders = $obj->getList();
+            $obj = new AmazonOrderList('store1');
+            $obj->setUseToken();
+            $obj->setLimits('Modified', $last_update_date->toIso8601String());
+            $obj->fetchOrders();
 
-        foreach ($amazon_orders as $amazon_order) {
-            $data = $amazon_order->getData();
+            $amazon_orders = $obj->getList();
 
-            $customer = false;
-            if(!empty($data['BuyerName'])){
-                $full_name = $data['BuyerName'];
-                $parts = explode(" ", $full_name);
-                $last_name = array_pop($parts);
-                $first_name = !empty($parts) ? implode(" ", $parts) : $last_name;
+            foreach ($amazon_orders as $amazon_order) {
+                $data = $amazon_order->getData();
 
-                $customer = Customer::updateOrCreate(
-                    ['email' => $data['BuyerEmail']],
-                    ['full_name' => $full_name, 'first_name' => $first_name]
-                );
-            }
+                $customer = false;
+                if(!empty($data['BuyerName'])){
+                    $full_name = $data['BuyerName'];
+                    $parts = explode(" ", $full_name);
+                    $last_name = array_pop($parts);
+                    $first_name = !empty($parts) ? implode(" ", $parts) : $last_name;
 
-            $order_data = [
-                'amazon_order_id' => $data['AmazonOrderId'],
-            ];
-            $order = Order::updateOrCreate(
-                ['amazon_order_id' => $data['AmazonOrderId']],
-                [
-                    'user_id' => $user->id,
-                    'customer_id' => $customer ? $customer->id : 0,
-                    'seller_order_id' => $data['SellerOrderId'],
-                    'fulfillment_channel' => $data['FulfillmentChannel'],
-                    'order_status' => $data['OrderStatus'],
-                    'number_of_items_shipped' => $data['NumberOfItemsShipped'],
-                    'number_of_items_unshipped' => $data['NumberOfItemsUnshipped'],
-                    'order_total_amount' => !empty($data['OrderTotal']) ? $data['OrderTotal']['Amount'] : 0,
-                    'ship_country_code' => !empty($data['ShippingAddress']) ? $data['ShippingAddress']['CountryCode'] : '',
-                    'ship_state' => !empty($data['ShippingAddress']) ? $data['ShippingAddress']['StateOrRegion'] : '',
-                    'ship_city' => !empty($data['ShippingAddress']) ? $data['ShippingAddress']['City'] : '',
-                    'ship_zip' => !empty($data['ShippingAddress']) ? $data['ShippingAddress']['PostalCode'] : '',
-                    'ship_full_name' => !empty($data['ShippingAddress']) ? $data['ShippingAddress']['Name'] : '',
-                    'ship_address1' => !empty($data['ShippingAddress']) ? $data['ShippingAddress']['AddressLine1'] : '',
-                    'ship_address2' => !empty($data['ShippingAddress']) ? $data['ShippingAddress']['AddressLine2'] : '',
-                    'purchase_date' => new Carbon($data['PurchaseDate']),
-                    'last_update_date' => new Carbon($data['LastUpdateDate'])
-                ]
-            );
-
-            // check if we already have items in this order and quantity is equal - then don't call amazon itemlist!
-            $items_count = Item::selectRaw('SUM(quantity_ordered) as quantity_ordered')
-                ->whereOrderId($order->id)->groupBy('order_id')->first();
-            if(!$items_count || ($items_count->quantity_ordered != $data['NumberOfItemsShipped'] + $data['NumberOfItemsUnshipped'])){
-
-                $obj = new AmazonOrderItemList('store1');
-                $obj->setUseToken();
-                $obj->setOrderId($data['AmazonOrderId']);
-                $obj->fetchItems();
-
-                $amazon_order_items = $obj->getItems();
-                foreach ($amazon_order_items as $amazon_order_item) {
-
-                    $product = Product::whereAsin($amazon_order_item['ASIN'])->first();
-                    if(!$product){
-                        $product = Product::create([
-                            'asin' => $amazon_order_item['ASIN'],
-                            'title' => $amazon_order_item['Title']
-                        ]);
-                    }
-
-                    Item::updateOrCreate(
-                        ['amazon_order_item_id' => $amazon_order_item['OrderItemId']],
-                        [
-                            'order_id' => $order->id,
-                            'product_id' => $product->id,
-                            'quantity_ordered' => $amazon_order_item['QuantityOrdered'],
-                            'quantity_shipped' => $amazon_order_item['QuantityShipped'],
-                            'price' => !empty($amazon_order_item['ItemPrice']) ? $amazon_order_item['ItemPrice']['Amount'] : 0,
-                            'discount' => !empty($amazon_order_item['ItemPrice']) ? $amazon_order_item['PromotionDiscount']['Amount'] : 0,
-                            'tax' => !empty($amazon_order_item['ItemPrice']) ? $amazon_order_item['ItemTax']['Amount'] : 0
-                        ]
+                    $customer = Customer::updateOrCreate(
+                        ['email' => $data['BuyerEmail']],
+                        ['full_name' => $full_name, 'first_name' => $first_name]
                     );
+                }
 
+                $order_data = [
+                    'amazon_order_id' => $data['AmazonOrderId'],
+                ];
+                $order = Order::updateOrCreate(
+                    ['amazon_order_id' => $data['AmazonOrderId']],
+                    [
+                        'user_id' => $user->id,
+                        'customer_id' => $customer ? $customer->id : 0,
+                        'seller_order_id' => $data['SellerOrderId'],
+                        'fulfillment_channel' => $data['FulfillmentChannel'],
+                        'order_status' => $data['OrderStatus'],
+                        'number_of_items_shipped' => $data['NumberOfItemsShipped'],
+                        'number_of_items_unshipped' => $data['NumberOfItemsUnshipped'],
+                        'order_total_amount' => !empty($data['OrderTotal']) ? $data['OrderTotal']['Amount'] : 0,
+                        'ship_country_code' => !empty($data['ShippingAddress']) ? $data['ShippingAddress']['CountryCode'] : '',
+                        'ship_state' => !empty($data['ShippingAddress']) ? $data['ShippingAddress']['StateOrRegion'] : '',
+                        'ship_city' => !empty($data['ShippingAddress']) ? $data['ShippingAddress']['City'] : '',
+                        'ship_zip' => !empty($data['ShippingAddress']) ? $data['ShippingAddress']['PostalCode'] : '',
+                        'ship_full_name' => !empty($data['ShippingAddress']) ? $data['ShippingAddress']['Name'] : '',
+                        'ship_address1' => !empty($data['ShippingAddress']) ? $data['ShippingAddress']['AddressLine1'] : '',
+                        'ship_address2' => !empty($data['ShippingAddress']) ? $data['ShippingAddress']['AddressLine2'] : '',
+                        'purchase_date' => new Carbon($data['PurchaseDate']),
+                        'last_update_date' => new Carbon($data['LastUpdateDate'])
+                    ]
+                );
+
+                // check if we already have items in this order and quantity is equal - then don't call amazon itemlist!
+                $items_count = Item::selectRaw('SUM(quantity_ordered) as quantity_ordered')
+                    ->whereOrderId($order->id)->groupBy('order_id')->first();
+                if(!$items_count || ($items_count->quantity_ordered != $data['NumberOfItemsShipped'] + $data['NumberOfItemsUnshipped'])){
+
+                    $obj = new AmazonOrderItemList('store1');
+                    $obj->setUseToken();
+                    $obj->setOrderId($data['AmazonOrderId']);
+                    $obj->fetchItems();
+
+                    $amazon_order_items = $obj->getItems();
+                    foreach ($amazon_order_items as $amazon_order_item) {
+
+                        $product = Product::whereAsin($amazon_order_item['ASIN'])->first();
+                        if(!$product){
+                            $product = Product::create([
+                                'asin' => $amazon_order_item['ASIN'],
+                                'title' => $amazon_order_item['Title']
+                            ]);
+                        }
+
+                        Item::updateOrCreate(
+                            ['amazon_order_item_id' => $amazon_order_item['OrderItemId']],
+                            [
+                                'order_id' => $order->id,
+                                'product_id' => $product->id,
+                                'quantity_ordered' => $amazon_order_item['QuantityOrdered'],
+                                'quantity_shipped' => $amazon_order_item['QuantityShipped'],
+                                'price' => !empty($amazon_order_item['ItemPrice']) ? $amazon_order_item['ItemPrice']['Amount'] : 0,
+                                'discount' => !empty($amazon_order_item['ItemPrice']) ? $amazon_order_item['PromotionDiscount']['Amount'] : 0,
+                                'tax' => !empty($amazon_order_item['ItemPrice']) ? $amazon_order_item['ItemTax']['Amount'] : 0
+                            ]
+                        );
+
+
+                    }
 
                 }
 
             }
 
         }
-
-
     }
 
 
