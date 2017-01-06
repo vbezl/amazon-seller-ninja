@@ -918,6 +918,9 @@ sales-channel
 
     protected function sendScheduledEmails()
     {
+
+        Log::info("Sending emails.");
+
         $emails = Email::whereStatus('scheduled')
             ->where('scheduled_at', '<', Carbon::now())
             ->get();
