@@ -63,35 +63,35 @@ class Kernel extends ConsoleKernel
             $start_date = Carbon::now()->subDays(3);
             $this->requestReports('_GET_AMAZON_FULFILLED_SHIPMENTS_DATA_', $start_date->toIso8601String(), $end_date->toIso8601String());
 
-        })->dailyAt('22:05');
+        })->twiceDaily(14, 20); //dailyAt('22:05');
 
         // check status of all reports
         $schedule->call( function () {
 
             $this->checkReports();
 
-        })->dailyAt('22:30');
+        })->twiceDaily(15, 21); //dailyAt('22:30');
 
         // download all reports
         $schedule->call( function () {
 
             $this->downloadReports();
 
-        })->dailyAt('22:40');
+        })->twiceDaily(16, 22); //dailyAt('22:40');
 
         // process all reports
         $schedule->call( function () {
 
             $this->processReports();
 
-        })->dailyAt('22:50');
+        })->twiceDaily(17, 23); //dailyAt('22:50');
 
         // check shipment tracking statuses
         $schedule->call( function () {
 
             $this->trackShipments();
 
-        })->dailyAt('23:00');
+        })->twiceDaily(18, 0); //dailyAt('23:00');
 
         // send scheduled emails
         $schedule->call( function () {
