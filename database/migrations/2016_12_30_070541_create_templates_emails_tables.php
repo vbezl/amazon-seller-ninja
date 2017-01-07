@@ -44,7 +44,7 @@ class CreateTemplatesEmailsTables extends Migration
             $table->mediumText('body');
             $table->enum('status', ['scheduled', 'sent']);
             $table->dateTime('scheduled_at');
-            $table->dateTime('sent_at');
+            $table->dateTime('sent_at')->nullable();
             $table->timestamps();
 
             $table->index('scheduled_at');
