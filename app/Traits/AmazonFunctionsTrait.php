@@ -850,6 +850,11 @@ sales-channel
                         $values[] = empty($anchor) ? ("http://www.amazon.com/dp/".$data['product']->asin)
                             : ("<a href=\"http://www.amazon.com/dp/".$data['product']->asin."\">$anchor</a>");
                         break;
+                    case 'order-link':
+                        $values[] = empty($anchor) ? ("https://www.amazon.com/gp/css/summary/edit.html?orderID=".$data['order']->amazon_order_id)
+                            : ("<a href=\"https://www.amazon.com/gp/css/summary/edit.html?orderID=".$data['order']->amazon_order_id."\">$anchor</a>");
+                        break;
+
                     default:
                         $values[] = '';
                 }
