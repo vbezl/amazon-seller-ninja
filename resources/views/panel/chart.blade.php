@@ -37,8 +37,12 @@
     var chart = AmCharts.makeChart("chartdiv", {
         "type": "serial",
         "theme": "light",
-        "marginTop":0,
-        "marginRight": 80,
+        "marginTop":80,
+        "marginLeft":80,
+        "marginRight": 40,
+        "autoMarginOffset": 20,
+        "mouseWheelZoomEnabled":true,
+        "dataDateFormat": "YYYY-MM-DD",
         "dataProvider": [
         @foreach ($data as $d => $v)
         @if ($loop->first)
@@ -58,67 +62,86 @@
             "id": "v1",
             "reversed": true,
             "axisAlpha": 0,
-            "position": "left"
+            "position": "left",
+            "ignoreAxisWidth": true
         },{
             "id": "v2",
             "axisAlpha": 0,
-            "position": "right"
+            "position": "right",
+            "ignoreAxisWidth": true
         }],
         "graphs": [{
             "id":"g1",
             "valueAxis": "v1",
+            "balloon":{
+                "drop":true,
+                "adjustBorderColor":false,
+                "color":"#ffffff"
+            },
             "balloonText": "[[date]]<br><b><span style='font-size:14px;'>[[rank]]</span></b>",
             "bullet": "round",
             "bulletSize": 8,
-            "lineColor": "#d1655d",
+            "bulletBorderAlpha": 1,
+            "bulletColor": "#FFFFFF",
+            "lineColor": "#00ff00",
+            "hideBulletsCount": 50,
+            "title": "Rank",
             "lineThickness": 2,
+            "useLineColorForBulletBorder": true,
             "negativeLineColor": "#637bb6",
-            "type": "smoothedLine",
             "valueField": "rank"
         },{
             "id":"g2",
             "valueAxis": "v2",
+            "balloon":{
+                "drop":true,
+                "adjustBorderColor":false,
+                "color":"#ffffff"
+            },
             "balloonText": "[[date]]<br><b><span style='font-size:14px;'>[[buying_price]]</span></b>",
             "bullet": "round",
             "bulletSize": 8,
+            "bulletBorderAlpha": 1,
+            "bulletColor": "#FFFFFF",
             "lineColor": "#d1655d",
+            "hideBulletsCount": 50,
+            "title": "Price",
             "lineThickness": 2,
+            "useLineColorForBulletBorder": true,
             "negativeLineColor": "#637bb6",
-            "type": "smoothedLine",
             "valueField": "buying_price"
         }],
         "chartScrollbar": {
-            "graph":"g1",
-            "gridAlpha":0,
-            "color":"#888888",
-            "scrollbarHeight":55,
-            "backgroundAlpha":0,
-            "selectedBackgroundAlpha":0.1,
-            "selectedBackgroundColor":"#888888",
-            "graphFillAlpha":0,
+            "graph": "g1",
+            "oppositeAxis":false,
+            "offset":30,
+            "scrollbarHeight": 80,
+            "backgroundAlpha": 0,
+            "selectedBackgroundAlpha": 0.1,
+            "selectedBackgroundColor": "#888888",
+            "graphFillAlpha": 0,
+            "graphLineAlpha": 0.5,
+            "selectedGraphFillAlpha": 0,
+            "selectedGraphLineAlpha": 1,
             "autoGridCount":true,
-            "selectedGraphFillAlpha":0,
-            "graphLineAlpha":0.2,
-            "graphLineColor":"#c2c2c2",
-            "selectedGraphLineColor":"#888888",
-            "selectedGraphLineAlpha":1
+            "color":"#AAAAAA"
 
         },
         "chartCursor": {
-            "categoryBalloonDateFormat": "YYYY-MM-DD",
-            "cursorAlpha": 0,
-            "valueLineEnabled":true,
-            "valueLineBalloonEnabled":true,
-            "valueLineAlpha":0.5,
-            "fullWidth":true
+            "pan": true,
+            "valueLineEnabled": true,
+            "valueLineBalloonEnabled": true,
+            "cursorAlpha":1,
+            "cursorColor":"#258cbb",
+            "limitToGraph":"g1",
+            "valueLineAlpha":0.2,
+            "valueZoomable":true
         },
-        "dataDateFormat": "YYYY-MM-DD",
         "categoryField": "date",
         "categoryAxis": {
-            "minPeriod": "YYYY-MM-DD",
-            "parseDates": false,
-            "minorGridAlpha": 0.1,
-            "minorGridEnabled": false
+            "parseDates": true,
+            "dashLength": 1,
+            "minorGridEnabled": true
         },
         "export": {
             "enabled": false
