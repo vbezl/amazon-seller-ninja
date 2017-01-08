@@ -782,6 +782,7 @@ sales-channel
         // get templates for the product (or null for all products) and this event
         $templates = Template::where('user_id', $user->id)
             ->where('event', $event)
+            ->where('status', '!=', 'inactive')
             ->where(function ($query) use ($product) {
             $query->where('product_id', $product->id)
                 ->orWhereNull('product_id');
