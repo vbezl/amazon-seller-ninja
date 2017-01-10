@@ -855,6 +855,10 @@ sales-channel
                         $values[] = empty($anchor) ? ("https://www.amazon.com/gp/css/summary/edit.html?orderID=".$data['order']->amazon_order_id)
                             : ("<a href=\"https://www.amazon.com/gp/css/summary/edit.html?orderID=".$data['order']->amazon_order_id."\">$anchor</a>");
                         break;
+                    case 'product-review-link':
+                        $values[] = empty($anchor) ? ("https://www.amazon.com/review/create-review?asin=".$data['product']->asin)
+                            : ("<a href=\"https://www.amazon.com/review/create-review?asin=".$data['product']->asin."\">$anchor</a>");
+                        break;
 
                     default:
                         $values[] = '';
