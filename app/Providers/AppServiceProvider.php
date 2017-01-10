@@ -12,6 +12,8 @@ use App\Models\Template;
 use App\Observers\TemplateObserver;
 use App\Models\Unsubscriber;
 use App\Observers\UnsubscriberObserver;
+use App\Models\Feedback;
+use App\Observers\FeedbackObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,6 +29,7 @@ class AppServiceProvider extends ServiceProvider
         Report::observe(ReportObserver::class);
         Template::observe(TemplateObserver::class);
         Unsubscriber::observe(UnsubscriberObserver::class);
+        Feedback::observe(FeedbackObserver::class);
     }
 
     /**

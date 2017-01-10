@@ -17,4 +17,12 @@ class Customer extends Model
         return $this->hasMany('App\Models\Order');
     }
 
+    /**
+     * The feedbacks that belong to this customer
+     */
+    public function feedbacks()
+    {
+        return $this->hasMany('App\Models\Feedback');
+    }
+
 }

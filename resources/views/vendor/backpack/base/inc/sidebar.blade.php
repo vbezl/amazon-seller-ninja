@@ -24,6 +24,7 @@
           <li><a href="{{ url(config('backpack.base.route_prefix', 'panel') . '/templates') }}"><i class="fa fa-tag"></i> <span>Templates</span></a></li>
           <li><a href="{{ url(config('backpack.base.route_prefix', 'panel') . '/emails') }}"><i class="fa fa-tag"></i> <span>Sent emails</span></a></li>
           <li><a href="{{ url(config('backpack.base.route_prefix', 'panel') . '/unsubscribers') }}"><i class="fa fa-tag"></i> <span>Unsubscribers</span></a></li>
+          <li><a href="{{ url(config('backpack.base.route_prefix', 'panel') . '/feedbacks') }}"><i class="fa fa-tag"></i> <span>Feedbacks</span></a></li>
           <li><a href="{{ url(config('backpack.base.route_prefix', 'panel') . '/connect') }}"><i class="fa fa-cog"></i> <span>Amazon connection</span></a></li>
           <li><a href="{{ url(config('backpack.base.route_prefix', 'panel') . '/setting') }}"><i class="fa fa-cog"></i> <span>Settings</span></a></li>
           <li><a href="{{ url(config('backpack.base.route_prefix').'/page') }}"><i class="fa fa-file-o"></i> <span>Pages</span></a></li>

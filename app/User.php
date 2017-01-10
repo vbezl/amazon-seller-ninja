@@ -86,4 +86,13 @@ class User extends Authenticatable
         return $this->hasMany('App\Models\Unsubscriber');
     }
 
+    /**
+     * The feedbacks that belong to the user.
+     */
+    public function feedbacks()
+    {
+        return $this->hasMany('App\Models\Feedback');
+    }
+
+
 }

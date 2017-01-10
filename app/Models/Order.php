@@ -54,4 +54,12 @@ class Order extends Model
         return $this->hasMany('App\Models\Email');
     }
 
+    /**
+     * The feedbacks that belong to this order
+     */
+    public function feedbacks()
+    {
+        return $this->hasMany('App\Models\Feedback');
+    }
+
 }

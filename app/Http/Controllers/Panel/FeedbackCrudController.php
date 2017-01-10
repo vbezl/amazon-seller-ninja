@@ -1,17 +1,14 @@
 <?php
 
-namespace App\Http\Controllers\Panel;
+namespace App\Http\Controllers\Admin;
 
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 
-use App\Models\Email;
-use App\Models\Order;
-
 // VALIDATION: change the requests to match your own file names if you need form validation
-use App\Http\Requests\EmailRequest as StoreRequest;
-use App\Http\Requests\EmailRequest as UpdateRequest;
+use App\Http\Requests\FeedbackRequest as StoreRequest;
+use App\Http\Requests\FeedbackRequest as UpdateRequest;
 
-class EmailCrudController extends CrudController {
+class FeedbackCrudController extends CrudController {
 
 	public function setUp() {
 
@@ -20,9 +17,9 @@ class EmailCrudController extends CrudController {
 		| BASIC CRUD INFORMATION
 		|--------------------------------------------------------------------------
 		*/
-        $this->crud->setModel("App\Models\Email");
-        $this->crud->setRoute("panel/emails");
-        $this->crud->setEntityNameStrings('email', 'emails');
+        $this->crud->setModel("App\Models\Feedback");
+        $this->crud->setRoute("admin/feedback");
+        $this->crud->setEntityNameStrings('feedback', 'feedbacks');
 
         /*
 		|--------------------------------------------------------------------------
@@ -40,12 +37,16 @@ class EmailCrudController extends CrudController {
 
         // ------ CRUD COLUMNS
         $this->crud->addColumn([
-            'name' => 'sent_at',
-            'label' => 'Sent at',
+            'name' => 'published_at',
+            'label' => 'Date',
         ]);
         $this->crud->addColumn([
-            'name' => 'subject',
-            'label' => 'Subject',
+            'name' => 'rating',
+            'label' => 'Rating',
+        ]);
+        $this->crud->addColumn([
+            'name' => 'comments',
+            'label' => 'Comments',
         ]);
         $this->crud->addColumn([
             'name' => 'order_id',
@@ -55,9 +56,17 @@ class EmailCrudController extends CrudController {
             'attribute' => 'amazon_order_id', // foreign key attribute that is shown to user
             'model' => "App\Models\Order" // foreign key model
         ]);
+        $this->crud->addColumn([
+            'name' => 'customer_id',
+            'label' => 'Customer',
+            'type' => 'select',
+            'entity' => 'customer', // the method that defines the relationship in your Model
+            'attribute' => 'email', // foreign key attribute that is shown to user
+            'model' => "App\Models\Customer" // foreign key model
+        ]);
         // $this->crud->addColumn(); // add a single column, at the end of the stack
         // $this->crud->addColumns(); // add multiple columns, at the end of the stack
-        // $this->crud->removeColumn('column'); // remove a column from the stack
+        // $this->crud->removeColumn('column_name'); // remove a column from the stack
         // $this->crud->removeColumns(['column_name_1', 'column_name_2']); // remove an array of columns from the stack
         // $this->crud->setColumnDetails('column_name', ['attribute' => 'value']); // adjusts the properties of the passed in column (by name)
         // $this->crud->setColumnsDetails(['column_1', 'column_2'], ['attribute' => 'value']);
@@ -71,15 +80,17 @@ class EmailCrudController extends CrudController {
         // $this->crud->removeButtonFromStack($name, $stack);
 
         // ------ CRUD ACCESS
-        $this->crud->allowAccess(['list', 'details_row']);
+        $this->crud->allowAccess(['list']);
         $this->crud->denyAccess(['create', 'update', 'reorder', 'delete']);
+        // $this->crud->allowAccess(['list', 'create', 'update', 'reorder', 'delete']);
+        // $this->crud->denyAccess(['list', 'create', 'update', 'reorder', 'delete']);
 
         // ------ CRUD REORDER
         // $this->crud->enableReorder('label_name', MAX_TREE_LEVEL);
         // NOTE: you also need to do allow access to the right users: $this->crud->allowAccess('reorder');
 
         // ------ CRUD DETAILS ROW
-        $this->crud->enableDetailsRow();
+        // $this->crud->enableDetailsRow();
         // NOTE: you also need to do allow access to the right users: $this->crud->allowAccess('details_row');
         // NOTE: you also need to do overwrite the showDetailsRow($id) method in your EntityCrudController to show whatever you'd like in the details row OR overwrite the views/backpack/crud/details_row.blade.php
 
@@ -104,15 +115,15 @@ class EmailCrudController extends CrudController {
         // $this->crud->addClause('active');
         // $this->crud->addClause('type', 'car');
         $this->crud->addClause('where', 'user_id', request()->user()->id);
-        $this->crud->addClause('where', 'status', 'sent');
+        // $this->crud->addClause('where', 'name', '==', 'car');
         // $this->crud->addClause('whereName', 'car');
         // $this->crud->addClause('whereHas', 'posts', function($query) {
         //     $query->activePosts();
         // });
         // $this->crud->with(); // eager load relationships
-        $this->crud->orderBy('sent_at', 'desc');
+        // $this->crud->orderBy();
         // $this->crud->groupBy();
-        $this->crud->limit(100);
+        // $this->crud->limit();
     }
 
 	public function store(StoreRequest $request)
@@ -132,13 +143,4 @@ class EmailCrudController extends CrudController {
         // use $this->data['entry'] or $this->crud->entry
         return $redirect_location;
 	}
-
-    public function showDetailsRow($id)
-    {
-        $data['email'] = Email::find($id);
-        if($data['email']->order_id > 0)
-            $data['order'] = Order::find($data['email']->order_id);
-
-        return view('panel.emaildetails', $data);
-    }
 }

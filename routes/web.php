@@ -11,9 +11,13 @@
 |
 */
 
+use Illuminate\Http\Request;
+
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::post('submit_feedbacks', 'ProcessFeedbacksController@index');
 
 // Admin Interface Routes
 Route::group(['prefix' => 'panel', 'middleware' => 'admin'], function()
@@ -29,5 +33,6 @@ Route::group(['prefix' => 'panel', 'middleware' => 'admin'], function()
     CRUD::resource('templates', 'Panel\TemplateCrudController');
     CRUD::resource('emails', 'Panel\EmailCrudController');
     CRUD::resource('unsubscribers', 'Panel\UnsubscriberCrudController');
+    CRUD::resource('feedbacks', 'Panel\FeedbackCrudController');
 
 });
