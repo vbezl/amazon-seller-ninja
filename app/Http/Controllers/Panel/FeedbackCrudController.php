@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Panel;
 
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 
