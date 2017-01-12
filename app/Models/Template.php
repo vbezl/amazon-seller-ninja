@@ -12,7 +12,7 @@ class Template extends Model
     use CrudTrait;
 
     protected $fillable = ['title', 'subject', 'body', 'event', 'event_delay_minutes', 'status',
-        'user_id', 'product_id'];
+        'user_id', 'product_id', 'skip_if_feedback_left'];
 
     protected $dates = [
         'deleted_at',

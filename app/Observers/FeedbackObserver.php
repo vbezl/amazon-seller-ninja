@@ -4,6 +4,8 @@ namespace App\Observers;
 
 use Log;
 use App\Models\Feedback;
+use App\Models\Template;
+use App\Models\Email;
 use App\Traits\AmazonFunctionsTrait;
 
 class FeedbackObserver
@@ -35,6 +37,26 @@ class FeedbackObserver
 
             $this->scheduleEmails($order, 'negative_feedback');
 
+        }
+
+        // RULE: skip if feedback left
+        // get templates using this rule, get scheduled emails for feedback order, check and delete if needed
+        $user = $feedback->user()->first();
+        $template_ids = $user->templates()
+            ->where('skip_if_feedback_left', 1)
+            ->get()
+            ->pluck('id')
+            ->toArray();
+
+        if(sizeof($template_ids) > 0){
+            Log::info('Templates found with skip_if_feedback_left=1... checking scheduled emails for current order');
+
+            $emails_deleted = $order->emails()
+                ->whereIn('template_id', $template_ids)
+                ->where('status', 'scheduled')
+                ->delete();
+
+            Log::info('Scheduled emails deleted: '.$emails_deleted.' emails');
         }
     }
 

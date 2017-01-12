@@ -72,6 +72,11 @@ class TemplateCrudController extends CrudController {
             'label' => 'Status',
             'type' => 'enum',
         ]);
+        $this->crud->addField([
+            'name' => 'skip_if_feedback_left',
+            'label' => 'Skip if customer has already left feedback?',
+            'type' => 'checkbox',
+        ]);
 
 
         // ------ CRUD COLUMNS
