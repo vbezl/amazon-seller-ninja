@@ -37,8 +37,10 @@ class FeedbackCrudController extends CrudController {
 
         // ------ CRUD COLUMNS
         $this->crud->addColumn([
-            'name' => 'published_at',
-            'label' => 'Date',
+            // run a function on the CRUD model and show its return value
+            'label' => "Date", // Table column heading
+            'type' => "model_function",
+            'function_name' => 'getPublishedDate', // the method in your Model
         ]);
         $this->crud->addColumn([
             'name' => 'rating',

@@ -30,6 +30,11 @@ class Feedback extends Model
 	|--------------------------------------------------------------------------
 	*/
 
+    public function getPublishedDate()
+    {
+        return $this->published_at->toDateString();
+    }
+
 	/*
 	|--------------------------------------------------------------------------
 	| RELATIONS
