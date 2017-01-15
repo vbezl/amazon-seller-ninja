@@ -118,6 +118,111 @@ trait AmazonFunctionsTrait {
 
     }
 
+    protected function checkProductAsin($asin) {
+
+        Log::info("Checking if ASIN in Amazon: $asin");
+        $obj = new AmazonProductList('store1');
+        $obj->setIdType('ASIN');
+        $obj->setProductIds([$asin]);
+        $obj->fetchProductList();
+        $amazon_products = $obj->getProduct();
+
+        $result = !empty($amazon_products) && empty($amazon_products['Error']);
+
+        Log::info('ASIN '.(!$result?'not ':'').'found in Amazon');
+
+        return $result;
+
+    }
+
+    protected function syncProductInfo($product) {
+
+        $obj = new AmazonProductList('store1');
+        $obj->setIdType('ASIN');
+        $obj->setProductIds([$product->asin]);
+        $obj->fetchProductList();
+        $amazon_products = $obj->getProduct();
+
+        $obj = new AmazonProductInfo('store1');
+        $obj->setASINs([$product->asin]);
+        $obj->fetchCompetitivePricing();
+        $products_prices = $obj->getProduct();
+        foreach ($products_prices as $k => $v) {
+            unset ($products_prices[$k]);
+            $d = $v->getData();
+            $products_prices[$d['Identifiers']['MarketplaceASIN']['ASIN']] = $v;
+        }
+
+        if(sizeof($amazon_products) > 0){
+
+            $amazon_product = $amazon_products[0];
+            $data = $amazon_product->getData();
+            $product->title      = $data['AttributeSets'][0]['Title'];
+            $product->image_url  = $data['AttributeSets'][0]['SmallImage']['URL'];
+            $product->save();
+
+            // adding price stats
+            if($products_prices[$product->asin]){
+                $d = $products_prices[$product->asin]->getData();
+
+                Price::create([
+                    'product_id' => $product->id,
+                    'regular_price' => $d['CompetitivePricing']['CompetitivePrices'][1]['Price']['LandedPrice']['Amount'],
+                    'buying_price' => $d['CompetitivePricing']['CompetitivePrices'][1]['Price']['LandedPrice']['Amount']
+                ]);
+            }
+
+            // attaching product to categories
+            $onetime = false;
+            foreach($data['SalesRankings'] as $salesrank){
+                $track = false;
+                $amazon_category_id = $salesrank['SalesRank']['ProductCategoryId'];
+                $rank = $salesrank['SalesRank']['Rank'];
+
+                // creating category if doesn't exist
+                $category = Category::firstOrCreate(['amazon_category_id' => $amazon_category_id]);
+
+                // tracking first non-numeric category
+                if(!$track && !is_numeric($amazon_category_id) && !$onetime){
+                    $track = true;
+                    $onetime = true;
+                }
+
+                $product->categories()->syncWithoutDetaching([$category->id => ['track' => $track]]);
+
+                if($track){
+                    // adding rank stats
+                    Rank::create(['product_id' => $product->id, 'category_id' => $category->id, 'rank' => $rank]);
+                }
+
+            }
+
+            return true;
+
+        }else{
+            return false;
+        }
+
+    }
+
+    protected function checkIfInSellerAccount(Product $product, User $user) {
+
+        $obj = new AmazonInventoryList("store1"); //store name matches the array key in the config file
+        $obj->setUseToken(); //tells the object to automatically use tokens right away
+        $obj->setStartTime("-1720 hours");
+        if($obj->fetchInventoryList() !== false){
+
+            $inventory = collect($obj->getSupply());
+            $asins = $inventory->pluck('ASIN');
+
+            return $asins->contains($product->asin);
+
+        }
+
+        return false;
+
+    }
+
     protected function syncPrices($products) {
 
         $db_products = $products->groupBy('asin')->toArray();
@@ -125,7 +230,7 @@ trait AmazonFunctionsTrait {
 
         $obj = new AmazonProductInfo('store1');
         $obj->setASINs($asins);
-        $obj->fetchMyPrice();
+        $obj->fetchCompetitivePricing();
         $amazon_products = $obj->getProduct();
 
         foreach($amazon_products as $product){
@@ -134,8 +239,8 @@ trait AmazonFunctionsTrait {
 
             Price::create([
                 'product_id' => $db_products[$asin][0]['id'],
-                'regular_price' => $data['Offers'][0]['RegularPrice']['Amount'],
-                'buying_price' => $data['Offers'][0]['BuyingPrice']['LandedPrice']['Amount']
+                'regular_price' => $data['CompetitivePricing']['CompetitivePrices'][1]['Price']['LandedPrice']['Amount'],
+                'buying_price' => $data['CompetitivePricing']['CompetitivePrices'][1]['Price']['LandedPrice']['Amount']
             ]);
 
         }

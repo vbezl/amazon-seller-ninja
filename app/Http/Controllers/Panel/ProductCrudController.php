@@ -8,9 +8,15 @@ use Backpack\CRUD\app\Http\Controllers\CrudController;
 use App\Http\Requests\ProductRequest as StoreRequest;
 use App\Http\Requests\ProductRequest as UpdateRequest;
 
+use App\Models\Product;
+use Log;
+use App\Traits\AmazonFunctionsTrait;
+
 class ProductCrudController extends CrudController {
 
-	public function setUp() {
+    use AmazonFunctionsTrait;
+
+    public function setUp() {
 
         /*
 		|--------------------------------------------------------------------------
@@ -27,15 +33,33 @@ class ProductCrudController extends CrudController {
 		|--------------------------------------------------------------------------
 		*/
 
-		$this->crud->setFromDb();
+		//$this->crud->setFromDb();
 
 		// ------ CRUD FIELDS
+        $this->crud->addField([
+            'name' => 'asin',
+            'label' => 'ASIN',
+            'type' => 'text',
+        ]);
         // $this->crud->addField($options, 'update/create/both');
         // $this->crud->addFields($array_of_arrays, 'update/create/both');
         // $this->crud->removeField('name', 'update/create/both');
         // $this->crud->removeFields($array_of_names, 'update/create/both');
 
         // ------ CRUD COLUMNS
+        $this->crud->addColumn([ // image
+            'label' => "Image",
+            'name' => "image_url",
+            'type' => 'image',
+        ]);
+        $this->crud->addColumn([
+            'name' => 'asin',
+            'label' => 'ASIN',
+        ]);
+        $this->crud->addColumn([
+            'name' => 'title',
+            'label' => 'Title',
+        ]);
         // $this->crud->addColumn(); // add a single column, at the end of the stack
         // $this->crud->addColumns(); // add multiple columns, at the end of the stack
         // $this->crud->removeColumn('column_name'); // remove a column from the stack
@@ -53,8 +77,8 @@ class ProductCrudController extends CrudController {
         // $this->crud->removeButtonFromStack($name, $stack);
 
         // ------ CRUD ACCESS
-        // $this->crud->allowAccess(['list', 'create', 'update', 'reorder', 'delete']);
-        // $this->crud->denyAccess(['list', 'create', 'update', 'reorder', 'delete']);
+        $this->crud->allowAccess(['list', 'create', 'delete']);
+        $this->crud->denyAccess(['update', 'reorder']);
 
         // ------ CRUD REORDER
         // $this->crud->enableReorder('label_name', MAX_TREE_LEVEL);
@@ -99,11 +123,56 @@ class ProductCrudController extends CrudController {
 
 	public function store(StoreRequest $request)
 	{
-		// your additional operations before save here
-        $redirect_location = parent::storeCrud();
-        // your additional operations after save here
-        // use $this->data['entry'] or $this->crud->entry
-        return $redirect_location;
+
+        $this->crud->hasAccessOrFail('create');
+
+        // fallback to global request instance
+        if (is_null($request)) {
+            $request = \Request::instance();
+        }
+
+        // replace empty values with NULL, so that it will work with MySQL strict mode on
+        foreach ($request->input() as $key => $value) {
+            if (empty($value) && $value !== '0') {
+                $request->request->set($key, null);
+            }
+        }
+
+        // check if ASIN is already in DB
+        $product = Product::where('asin', $request->input('asin'))->first();
+        if($product === null){
+
+            // insert item in the db
+            $product = $this->crud->create($request->except(['redirect_after_save', '_token']));
+            $this->data['entry'] = $this->crud->entry = $product;
+
+        }
+
+        $user = $request->user();
+        Log::info('checking if in user seller account, user_id: '.$user->id);
+        $in_user_seller_account = $this->checkIfInSellerAccount($product, $user);
+        Log::info('product is '.(!$in_user_seller_account?'not ':'').'in user seller account');
+
+        // attaching product to user
+        Log::info('attaching product to user, product_id -> user_id: '.$product->id.'->'.$user->id);
+        $product->users()->syncWithoutDetaching([$user->id => [
+            'in_user_seller_account' => $in_user_seller_account,
+            'track' => false
+        ]]);
+
+
+        // show a success message
+        \Alert::success(trans('backpack::crud.insert_success'))->flash();
+
+        // redirect the user where he chose to be redirected
+        switch ($request->input('redirect_after_save')) {
+            case 'current_item_edit':
+                return \Redirect::to($this->crud->route.'/'.$item->getKey().'/edit');
+
+            default:
+                return \Redirect::to($request->input('redirect_after_save'));
+        }
+
 	}
 
 	public function update(UpdateRequest $request)

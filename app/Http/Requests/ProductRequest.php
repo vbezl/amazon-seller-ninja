@@ -25,7 +25,8 @@ class ProductRequest extends \Backpack\CRUD\app\Http\Requests\CrudRequest
     public function rules()
     {
         return [
-            // 'name' => 'required|min:5|max:255'
+            'asin' => 'required|alpha_num|size:10|asin_amazon'
+        // 'name' => 'required|min:5|max:255'
         ];
     }
 
@@ -50,6 +51,7 @@ class ProductRequest extends \Backpack\CRUD\app\Http\Requests\CrudRequest
     {
         return [
             //
+            'asin.asin_amazon' => 'ASIN not found in Amazon'
         ];
     }
 }
