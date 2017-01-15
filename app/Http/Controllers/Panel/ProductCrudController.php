@@ -60,6 +60,19 @@ class ProductCrudController extends CrudController {
             'name' => 'title',
             'label' => 'Title',
         ]);
+        $this->crud->addColumn([
+            // run a function on the CRUD model and show its return value
+            'label' => "Rank", // Table column heading
+            'type' => "model_function",
+            'function_name' => 'getLatestProductRank', // the method in your Model
+        ]);
+        $this->crud->addColumn([
+            // run a function on the CRUD model and show its return value
+            'label' => "Price", // Table column heading
+            'type' => "model_function",
+            'function_name' => 'getLatestProductPrice', // the method in your Model
+        ]);
+
         // $this->crud->addColumn(); // add a single column, at the end of the stack
         // $this->crud->addColumns(); // add multiple columns, at the end of the stack
         // $this->crud->removeColumn('column_name'); // remove a column from the stack

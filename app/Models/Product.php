@@ -29,11 +29,25 @@ class Product extends Model
 	|--------------------------------------------------------------------------
 	*/
 
-	/*
-	|--------------------------------------------------------------------------
-	| RELATIONS
-	|--------------------------------------------------------------------------
-	*/
+    public function getLatestProductRank()
+    {
+        $rank = $this->ranks()->orderBy('created_at', 'desc')->first();
+
+        return $rank !== false ? $rank->rank : 'N/A';
+    }
+
+    public function getLatestProductPrice()
+    {
+        $price = $this->prices()->orderBy('created_at', 'desc')->first();
+
+        return $price !== false ? $price->buying_price : 'N/A';
+    }
+
+    /*
+     |--------------------------------------------------------------------------
+     | RELATIONS
+     |--------------------------------------------------------------------------
+     */
 
     /**
      * The users that belong to the product.
