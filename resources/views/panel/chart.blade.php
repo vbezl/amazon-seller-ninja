@@ -45,16 +45,18 @@
         "dataDateFormat": "YYYY-MM-DD",
         "dataProvider": [
         @foreach ($data as $d => $v)
-        @if ($loop->first)
-        {
-        @else
-        ,{
-        @endif
+            @if (isset($v['rank']) && isset($v['buying_price']))
+                @if ($loop->first)
+                {
+                @else
+                ,{
+                @endif
 
-            "date": "{{ $d }}",
-            "rank": {{ $v['rank'] }},
-            "buying_price": {{ $v['buying_price'] }}
-        }
+                    "date": "{{ $d }}",
+                    "rank": {{ $v['rank'] }},
+                    "buying_price": {{ $v['buying_price'] }}
+                }
+            @endif
         @endforeach
         ],
         "valueAxes": [{

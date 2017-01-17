@@ -38,7 +38,6 @@ class ProductChartController extends Controller
             $data[$rank->created_at->toDateString()]['rank'] = $rank->rank;
         }
         foreach ($prices as $price) {
-            $data[$price->created_at->toDateString()]['regular_price'] = $price->regular_price;
             $data[$price->created_at->toDateString()]['buying_price'] = $price->buying_price;
         }
 
