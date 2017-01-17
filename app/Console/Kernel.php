@@ -42,8 +42,7 @@ class Kernel extends ConsoleKernel
                 $query->wherePivot('track', 1);
             }])->get();
 
-            $this->syncRanks($products);
-            $this->syncPrices($products);
+            $this->syncPricesRanks($products);
 
         })->dailyAt('21:55');
 

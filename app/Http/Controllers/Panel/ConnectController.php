@@ -35,8 +35,7 @@ class ConnectController extends Controller
 //        $products = Product::with(['categories' => function($query){
 //            $query->wherePivot('track', 1);
 //        }])->get();
-//        $this->syncRanks($products);
-//        $this->syncPrices($products);
+//        $this->syncPricesRanks($products);
 
         // testing cron job for sync orders
 //        $this->syncOrders();

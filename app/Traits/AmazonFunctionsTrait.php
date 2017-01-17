@@ -2,15 +2,15 @@
 
 use \Illuminate\Http\Request;
 
-use Peron\AmazonMws\AmazonInventoryList;
-use Peron\AmazonMws\AmazonProductInfo;
-use Peron\AmazonMws\AmazonProductList;
-use Peron\AmazonMws\AmazonOrderList;
-use Peron\AmazonMws\AmazonOrderItemList;
-use Peron\AmazonMws\AmazonReportRequest;
-use Peron\AmazonMws\AmazonReportRequestList;
-use Peron\AmazonMws\AmazonReportList;
-use Peron\AmazonMws\AmazonReport;
+use App\MyMWS\MyAmazonInventoryList;
+use App\MyMWS\MyAmazonProductInfo;
+use App\MyMWS\MyAmazonProductList;
+use App\MyMWS\MyAmazonOrderList;
+use App\MyMWS\MyAmazonOrderItemList;
+use App\MyMWS\MyAmazonReportRequest;
+use App\MyMWS\MyAmazonReportRequestList;
+use App\MyMWS\MyAmazonReportList;
+use App\MyMWS\MyAmazonReport;
 
 use App\Models\Product;
 use App\Models\Category;
@@ -37,20 +37,21 @@ trait AmazonFunctionsTrait {
     protected function syncProducts(Request $request)
     {
 
-        $obj = new AmazonInventoryList("store1"); //store name matches the array key in the config file
+        $user = $request->user();
+        $obj = new MyAmazonInventoryList($user);
         $obj->setUseToken(); //tells the object to automatically use tokens right away
         $obj->setStartTime("-720 hours");
         if($obj->fetchInventoryList() !== false){
             $inventory = collect($obj->getSupply());
             $asins = $inventory->pluck('ASIN');
 
-            $obj = new AmazonProductList('store1');
+            $obj = new MyAmazonProductList($user);
             $obj->setIdType('ASIN');
             $obj->setProductIds($asins->toArray());
             $obj->fetchProductList();
             $products = $obj->getProduct();
 
-            $obj = new AmazonProductInfo('store1');
+            $obj = new MyAmazonProductInfo($user);
             $obj->setASINs($asins->toArray());
             $obj->fetchMyPrice();
             $products_prices = $obj->getProduct();
@@ -120,8 +121,10 @@ trait AmazonFunctionsTrait {
 
     protected function checkProductAsin($asin) {
 
+        $user = request()->user();
+
         Log::info("Checking if ASIN in Amazon: $asin");
-        $obj = new AmazonProductList('store1');
+        $obj = new MyAmazonProductList($user);
         $obj->setIdType('ASIN');
         $obj->setProductIds([$asin]);
         $obj->fetchProductList();
@@ -137,13 +140,14 @@ trait AmazonFunctionsTrait {
 
     protected function syncProductInfo($product) {
 
-        $obj = new AmazonProductList('store1');
+        $user = request()->user();
+        $obj = new MyAmazonProductList($user);
         $obj->setIdType('ASIN');
         $obj->setProductIds([$product->asin]);
         $obj->fetchProductList();
         $amazon_products = $obj->getProduct();
 
-        $obj = new AmazonProductInfo('store1');
+        $obj = new MyAmazonProductInfo($user);
         $obj->setASINs([$product->asin]);
         $obj->fetchCompetitivePricing();
         $products_prices = $obj->getProduct();
@@ -207,7 +211,8 @@ trait AmazonFunctionsTrait {
 
     protected function checkIfInSellerAccount(Product $product, User $user) {
 
-        $obj = new AmazonInventoryList("store1"); //store name matches the array key in the config file
+//        $obj = new AmazonInventoryList("store1"); //store name matches the array key in the config file
+        $obj = new MyAmazonInventoryList($user);
         $obj->setUseToken(); //tells the object to automatically use tokens right away
         $obj->setStartTime("-1720 hours");
         if($obj->fetchInventoryList() !== false){
@@ -223,61 +228,53 @@ trait AmazonFunctionsTrait {
 
     }
 
-    protected function syncPrices($products) {
+    protected function syncPricesRanks($products) {
+
+        // getting user_id=1 as default seller for MWS connection (for cron)
+        $user = User::find(1);
 
         $db_products = $products->groupBy('asin')->toArray();
         $asins = array_keys($db_products);
 
-        $obj = new AmazonProductInfo('store1');
-        $obj->setASINs($asins);
-        $obj->fetchCompetitivePricing();
-        $amazon_products = $obj->getProduct();
+        // can have up to 20 products per request
+        $iterations = ceil(sizeof($asins) / 20);
+        for($i=0; $i<$iterations; $i++){
+            $offset = $i*20;
+            $current_asins = array_slice($asins, $offset, 20);
 
-        foreach($amazon_products as $product){
-            $data = $product->getData();
-            $asin = $data['Identifiers']['MarketplaceASIN']['ASIN'];
+            $obj = new MyAmazonProductInfo($user);
+            $obj->setASINs($current_asins);
+            $obj->fetchCompetitivePricing();
+            $amazon_products = $obj->getProduct();
 
-            Price::create([
-                'product_id' => $db_products[$asin][0]['id'],
-                'regular_price' => $data['CompetitivePricing']['CompetitivePrices'][1]['Price']['LandedPrice']['Amount'],
-                'buying_price' => $data['CompetitivePricing']['CompetitivePrices'][1]['Price']['LandedPrice']['Amount']
-            ]);
+            foreach($amazon_products as $product){
+                $data = $product->getData();
+                $asin = $data['Identifiers']['MarketplaceASIN']['ASIN'];
 
-        }
+                Price::create([
+                    'product_id' => $db_products[$asin][0]['id'],
+                    'regular_price' => $data['CompetitivePricing']['CompetitivePrices'][1]['Price']['LandedPrice']['Amount'],
+                    'buying_price' => $data['CompetitivePricing']['CompetitivePrices'][1]['Price']['LandedPrice']['Amount']
+                ]);
 
-    }
+                $track_categories = $db_products[$asin][0]['categories'];
+                foreach ($track_categories as $i => $c) {
+                    unset($track_categories[$i]);
+                    $track_categories[$c['amazon_category_id']] = $c['id'];
+                }
+                $track_categories_keys = array_keys($track_categories);
 
-    protected function syncRanks($products) {
+                foreach($data['SalesRankings'] as $salesrank){
 
-        $db_products = $products->groupBy('asin')->toArray();
-        $asins = array_keys($db_products);
+                    $amazon_category_id = $salesrank['SalesRank']['ProductCategoryId'];
+                    $rank = $salesrank['SalesRank']['Rank'];
 
-        $obj = new AmazonProductList('store1');
-        $obj->setIdType('ASIN');
-        $obj->setProductIds($asins);
-        $obj->fetchProductList();
-        $amazon_products = $obj->getProduct();
+                    if(in_array($amazon_category_id, $track_categories_keys)) {
 
-        foreach($amazon_products as $product){
-            $data = $product->getData();
-            $asin = $data['Identifiers']['MarketplaceASIN']['ASIN'];
+                        // adding rank stats
+                        Rank::create(['product_id' => $db_products[$asin][0]['id'], 'category_id' => $track_categories[$amazon_category_id], 'rank' => $rank]);
 
-            $track_categories = $db_products[$asin][0]['categories'];
-            foreach ($track_categories as $i => $c) {
-                unset($track_categories[$i]);
-                $track_categories[$c['amazon_category_id']] = $c['id'];
-            }
-            $track_categories_keys = array_keys($track_categories);
-
-            foreach($data['SalesRankings'] as $salesrank){
-
-                $amazon_category_id = $salesrank['SalesRank']['ProductCategoryId'];
-                $rank = $salesrank['SalesRank']['Rank'];
-
-                if(in_array($amazon_category_id, $track_categories_keys)) {
-
-                    // adding rank stats
-                    Rank::create(['product_id' => $db_products[$asin][0]['id'], 'category_id' => $track_categories[$amazon_category_id], 'rank' => $rank]);
+                    }
 
                 }
 
@@ -286,7 +283,6 @@ trait AmazonFunctionsTrait {
         }
 
     }
-
 
     protected function syncOrders() {
 
@@ -299,7 +295,7 @@ trait AmazonFunctionsTrait {
             $last_update_order = $user->orders()->orderBy('last_update_date', 'desc')->first();
             $last_update_date = $last_update_order ? $last_update_order->last_update_date : Carbon::now()->subDays(1);
 
-            $obj = new AmazonOrderList('store1');
+            $obj = new MyAmazonOrderList($user);
             $obj->setUseToken();
             $obj->setLimits('Modified', $last_update_date->toIso8601String());
             $obj->fetchOrders();
@@ -350,7 +346,7 @@ trait AmazonFunctionsTrait {
                     ->whereOrderId($order->id)->groupBy('order_id')->first();
                 if(!$items_count || ($items_count->quantity_ordered != $data['NumberOfItemsShipped'] + $data['NumberOfItemsUnshipped'])){
 
-                    $obj = new AmazonOrderItemList('store1');
+                    $obj = new MyAmazonOrderItemList($user);
                     $obj->setUseToken();
                     $obj->setOrderId($data['AmazonOrderId']);
                     $obj->fetchItems();
@@ -394,7 +390,10 @@ trait AmazonFunctionsTrait {
     protected function requestReports($report_type, $start_date, $end_date)
     {
 
-        $obj = new AmazonReportRequest('store1');
+        // temporary taking user_id=1
+        $user = User::find(1);
+
+        $obj = new MyAmazonReportRequest($user);
         $obj->setReportType($report_type);
         $obj->setTimeLimits($start_date, $end_date);
         $obj->requestReport();
@@ -432,7 +431,10 @@ trait AmazonFunctionsTrait {
 
             Log::info('requesting statuses for reports: request_ids='.implode(', ', $request_ids));
 
-            $obj = new AmazonReportRequestList('store1');
+            // TODO: take user_id from report
+            $user = User::find(1);
+
+            $obj = new MyAmazonReportRequestList($user);
             $obj->setRequestIds($request_ids);
             $obj->fetchRequestList();
             $reports = $obj->getList();
@@ -466,7 +468,10 @@ trait AmazonFunctionsTrait {
 
             foreach($report_ids as $report_id) {
 
-                $obj = new AmazonReport('store1');
+                // TODO: take user from report
+                $user = User::find(1);
+
+                $obj = new MyAmazonReport($user);
                 $obj->setReportId($report_id);
                 $report = $obj->fetchReport();
 
