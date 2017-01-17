@@ -53,7 +53,6 @@
 
             "date": "{{ $d }}",
             "rank": {{ $v['rank'] }},
-            "regular_price": {{ $v['regular_price'] }},
             "buying_price": {{ $v['buying_price'] }}
         }
         @endforeach
