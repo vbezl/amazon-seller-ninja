@@ -251,11 +251,15 @@ trait AmazonFunctionsTrait {
                 $data = $product->getData();
                 $asin = $data['Identifiers']['MarketplaceASIN']['ASIN'];
 
-                Price::create([
-                    'product_id' => $db_products[$asin][0]['id'],
-                    'regular_price' => $data['CompetitivePricing']['CompetitivePrices'][1]['Price']['LandedPrice']['Amount'],
-                    'buying_price' => $data['CompetitivePricing']['CompetitivePrices'][1]['Price']['LandedPrice']['Amount']
-                ]);
+                if(isset($data['CompetitivePricing']) && isset($data['CompetitivePricing']['CompetitivePrices']) && isset($data['CompetitivePricing']['CompetitivePrices'][1])){
+
+                    Price::create([
+                        'product_id' => $db_products[$asin][0]['id'],
+                        'regular_price' => $data['CompetitivePricing']['CompetitivePrices'][1]['Price']['LandedPrice']['Amount'],
+                        'buying_price' => $data['CompetitivePricing']['CompetitivePrices'][1]['Price']['LandedPrice']['Amount']
+                    ]);
+
+                }
 
                 $track_categories = $db_products[$asin][0]['categories'];
                 foreach ($track_categories as $i => $c) {
