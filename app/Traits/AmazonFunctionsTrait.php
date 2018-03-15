@@ -111,10 +111,12 @@ trait AmazonFunctionsTrait {
 
             }
 
-            echo "synced products, categories, ranks, prices";
+            Log::error('synced products, categories, ranks, prices');
+            return true;
 
         } else {
-            echo 'There was a problem with the Amazon library.';
+            Log::error('There was a problem with the Amazon library.');
+            return false;
         }
 
     }

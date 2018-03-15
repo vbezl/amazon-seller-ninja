@@ -94,5 +94,14 @@ class User extends Authenticatable
         return $this->hasMany('App\Models\Feedback');
     }
 
+    /**
+     * The marketplace this user belongs to.
+     */
+    public function marketplace()
+    {
+        return $this->belongsTo('App\Models\Marketplace');
+    }
+
+
 
 }

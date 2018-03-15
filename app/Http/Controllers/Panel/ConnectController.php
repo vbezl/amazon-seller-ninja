@@ -10,8 +10,10 @@ use App\Models\Product;
 use App\Models\Order;
 use App\Models\Template;
 use App\Models\Email;
+use App\Models\Marketplace;
 
 use \Carbon\Carbon;
+use Validator;
 
 // for parsing feedbacks info:
 //use Illuminate\Support\Facades\Storage;
@@ -120,7 +122,7 @@ class ConnectController extends Controller
         exit;
 */
 
-        return view('panel.connect', ['user' => $request->user()]);
+        return view('panel.connect', ['user' => $request->user(), 'marketplaces' => Marketplace::pluck('amazon_marketplace_name', 'id')]);
     }
 
     public function storeConnect(Request $request)
@@ -128,20 +130,33 @@ class ConnectController extends Controller
 
         $user = $request->user();
 
-        $this->validate($request, [
+        $validator = Validator::make($request->all(), [
             'amazon_seller_id' => "required|unique:users,amazon_seller_id,{$user->amazon_seller_id},amazon_seller_id|min:12|max:16",
             'amazon_mws_token' => "required",
             'amazon_email_from' => "required|email",
         ]);
 
-        $user->amazon_seller_id = $request->input('amazon_seller_id');
-        $user->amazon_mws_token = $request->input('amazon_mws_token');
-        $user->amazon_email_from = $request->input('amazon_email_from');
-        $user->save();
+        $validator->after(function ($validator) use ($request, $user) {
 
-        $this->syncProducts($request);
+            $user->marketplace_id = $request->input('marketplace_id');
+            $user->amazon_seller_id = $request->input('amazon_seller_id');
+            $user->amazon_mws_token = $request->input('amazon_mws_token');
+            $user->amazon_email_from = $request->input('amazon_email_from');
+            $user->save();
 
-        return view('panel.connect', ['user' => $request->user()]);
+            if(!$this->syncProducts($request)){
+                $validator->errors()->add('amazon_seller_id', 'MWS credentials not valid!');
+            }
+        });
+
+        if ($validator->fails()) {
+            return  redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        return view('panel.connect', ['user' => $request->user(), 'marketplaces' => Marketplace::pluck('amazon_marketplace_name', 'id')]);
+
     }
 
 

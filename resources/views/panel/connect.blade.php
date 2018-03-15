@@ -39,6 +39,10 @@
 
                 <div class="box-body">
                     <div class="form-group">
+                        <label for="InputMarketplace">Marketplace</label>
+                        {!! Form::select('marketplace_id', $marketplaces, $user->marketplace_id ?: 3, ['class' => 'form-control', 'id' => 'InputMarketplace']) !!}
+                    </div>
+                    <div class="form-group">
                         <label for="InputSellerID">Seller ID</label>
                         <input type="text" class="form-control" id="InputSellerID" name="amazon_seller_id" placeholder="Enter Amazon Seller ID" value="{{ $user->amazon_seller_id }}">
                         <small id="passwordHelpInline" class="text-muted">

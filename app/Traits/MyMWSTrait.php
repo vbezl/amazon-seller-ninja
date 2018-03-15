@@ -5,14 +5,15 @@ trait MyMWSTrait {
     public function setStore($user)
     {
 
+        $marketplace = $user->marketplace()->first();
         $store = [
             'store' => [
                 'merchantId' => $user->amazon_seller_id,
                 'MWSAuthToken' => $user->amazon_mws_token,
-                'marketplaceId' => 'ATVPDKIKX0DER',
+                'marketplaceId' => $marketplace->amazon_marketplace_id,
                 'keyId' => 'AKIAJGPC6WPJ7SBXYECA',
                 'secretKey' => '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',
-                'amazonServiceUrl' => 'https://mws.amazonservices.com/',
+                'amazonServiceUrl' => $marketplace->amazon_mws_endpoint,
             ],
 
             // Default service URL
